@@ -1,0 +1,18 @@
+# Credenciales y configuración local
+.env
+*.env.local
+config.local.js
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.suo
+*.user
+
+# Archivos de Office (van en OneDrive, no en el repo)
+*.docx
+*.xlsx
+*.pdf
