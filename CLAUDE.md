@@ -61,7 +61,7 @@ Herramienta operativa para el equipo de agentes de venta (Sporting + Woker eComm
 1. **Re-contacto de clientes con pedidos cancelados** — identificados externamente por un Power BI que cruza clientes con pedidos cancelados y sin compra posterior. El agente busca al cliente por email, ve su historial de pedidos (vía cache de `vtex-control-center`), y registra si lo contactó.
 2. **Concreción de venta** — una vez el cliente confirma, el agente genera el pedido en VTEX vía Master Data (pago pendiente, promissory/pagaré), envía el link de pago, y cuando el cliente abona, el agente aprueba el pago y completa los datos operativos requeridos por administración (origen, tipo de factura, agente de retención, medios de pago con montos/transacciones, comprobantes).
 
-Ver estructura del Sheet en `docs/Ventas_Personalizadas_DB_Structure.md` (pendiente de crear).
+Ver estructura del Sheet en [`docs/ventas_personalizadas_db_structure.md`](docs/ventas_personalizadas_db_structure.md).
 
 ---
 

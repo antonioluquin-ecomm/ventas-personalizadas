@@ -2,7 +2,7 @@
 
 ## Próximos pasos
 
-- [ ] Definir modelo de datos del Sheet (gestiones, contactos, ventas, pagos, adjuntos)
+- [x] Definir modelo de datos del Sheet (gestiones, contactos, ventas, pagos, adjuntos) — ver `docs/ventas_personalizadas_db_structure.md`
 - [ ] Definir contrato del endpoint de solo lectura que expondrá `vtex-control-center` (cache diaria de pedidos)
 - [ ] Confirmar con VTEX si existe API de creación de pedido (placement) o si v1 sigue usando Master Data
 - [ ] Login + shell (SPA, RBAC flexible por módulo — ver `login_standard.md` y `application_shell.md`)
