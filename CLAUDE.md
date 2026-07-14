@@ -27,10 +27,13 @@
 
 ## Dependencia externa: cache de pedidos
 
-Este proyecto **no** guarda credenciales VTEX ni llama a la API de VTEX. Para evitar consultas ilimitadas y no consumir cuota de API, `vtex-control-center` mantiene una hoja cache (`Pedidos_DB`) actualizada una vez al día vía trigger, y expone un endpoint de solo lectura sobre esa cache.
+Este proyecto **no** guarda credenciales VTEX ni llama a la API de VTEX. `vtex-control-center` mantiene una hoja cache (`PEDIDOS_DB`) actualizada una vez al día vía trigger, y expone la acción `getPedidosClienteCache` de solo lectura sobre esa cache.
 
-- El endpoint y su contrato (payload, campos devueltos) se documentan en `vtex-control-center/docs/gas-setup.md` cuando se implemente.
-- Si el flujo de aprobación de pago necesita mutar el pedido en VTEX en tiempo real (pasar a "pago aprobado"), evaluar si esa escritura la hace `vtex-control-center` (que ya tiene el patrón de transición de estado en `Pedidos.gs`) expuesta como acción, en vez de duplicar la integración acá.
+- **Contrato completo del endpoint** (request/response, auth, sync diario): `vtex-control-center/docs/decisions/004-endpoint-pedidos-ventas-personalizadas.md`.
+- Auth: token de servicio (`VTEX_CC_SERVICE_TOKEN` en Script Properties de este proyecto), no sesión de usuario — es una llamada backend-a-backend.
+- El endpoint devuelve email/teléfono del cliente **sin enmascarar** (a diferencia de la UI propia de `vtex-control-center`), porque el propósito de este proyecto es justamente contactar al cliente. Cada llamada queda logueada del lado de `vtex-control-center`.
+- Multi-store transparente: el endpoint busca en ambas tiendas (Sporting, Woker) y devuelve `store_id` por pedido — este proyecto no necesita selector de tienda.
+- Si el flujo de aprobación de pago necesita mutar el pedido en VTEX en tiempo real (pasar a "pago aprobado"), evaluar si esa escritura la hace `vtex-control-center` (que ya tiene el patrón de transición de estado en `Pedidos.gs`) expuesta como una acción nueva, en vez de duplicar la integración acá.
 
 ---
 
