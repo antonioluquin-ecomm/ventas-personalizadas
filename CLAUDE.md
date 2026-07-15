@@ -10,7 +10,7 @@
 - **Nunca `fetch()` directo** — toda llamada al backend usa un helper único (`apiPost()` o equivalente) en `src/js/api.js`, siguiendo el mismo patrón que `commerce-hub`.
 - **Este proyecto no tiene integración directa con VTEX.** La consulta de pedidos se hace contra el endpoint de solo lectura de `vtex-control-center` (cache diaria), nunca contra la API de VTEX directamente. Ver `docs/decisions/001-cache-pedidos-vtex-control-center.md`.
 - **Mock mode**: si no hay URL de API configurada, las funciones deben retornar datos de ejemplo compatibles con la estructura real (`src/data/*.json`). Todo endpoint nuevo necesita su rama mock.
-- **No tocar `Auth.gs`** ni el módulo de sesiones sin auditoría previa.
+- **No tocar `apps-script/Users.gs`** (login, sesiones, roles/permisos) sin auditoría previa.
 - **No hacer push** sin confirmación explícita del usuario.
 - **Datos sensibles del cliente** (teléfono, documento, medios de pago) — enmascarar en vistas de lista, igual que hace `vtex-control-center/apps-script/Pedidos.gs` (`maskTail_`). No hay email real disponible desde VTEX para este proyecto (ver dependencia externa más abajo).
 
@@ -38,7 +38,24 @@ Este proyecto **no** guarda credenciales VTEX ni llama a la API de VTEX. `vtex-c
 
 ---
 
-## Arquitectura de archivos JS (a definir a medida que se implementa)
+## Arquitectura de archivos GAS (backend — implementado)
+
+| Archivo | Responsabilidad |
+|---------|----------------|
+| `apps-script/Code.gs` | Router (RBAC por sesión, mismo patrón que `commerce-hub/apps-script/Code.gs`) |
+| `apps-script/Schema.gs` | Columnas de cada hoja + datos semilla + vocabularios controlados (sin hojas `CAT_*`) |
+| `apps-script/Setup.gs` | `setupAll()` — creación idempotente de hojas y semillas |
+| `apps-script/Helpers.gs` | `rowToObj`, `findRowById`, `getNextId`, logging (`LOGS`/`ERRORS`/`AUDIT_LOG`) |
+| `apps-script/Users.gs` | Login, sesiones, roles y permisos (RBAC flexible) |
+| `apps-script/PedidosProxy.gs` | `buscarPedidosCliente` — proxy hacia `vtex-control-center` |
+| `apps-script/Gestiones.gs` | CRUD de `GESTIONES` |
+| `apps-script/Ventas.gs` | CRUD de `VENTAS`/`PAGOS_VENTA`/`COMPROBANTES_VENTA`, aprobación de pago, `getResumen` |
+
+Ver `docs/gas-setup.md` para el setup paso a paso.
+
+**Pendiente conocido:** `aprobarPagoVenta` solo actualiza el Sheet — todavía no muta el pedido en VTEX a "pago aprobado" (necesita una acción nueva en `vtex-control-center`, ver comentario en `Ventas.gs`).
+
+## Arquitectura de archivos JS (frontend — a definir a medida que se implementa)
 
 | Archivo | Responsabilidad |
 |---------|----------------|
