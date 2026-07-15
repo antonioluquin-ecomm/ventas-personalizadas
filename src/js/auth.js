@@ -115,6 +115,10 @@ function _applySession() {
   }
 
   _renderUserIndicator();
+
+  if (SESSION.isAdmin()) {
+    renderUserManagementSection();
+  }
 }
 
 /* ─── LOGOUT ──────────────────────────────────────────────── */
@@ -368,4 +372,518 @@ async function _apiAuthPost(body) {
     throw new Error(json.error || 'Error desconocido');
   }
   return json;
+}
+
+/* ─── ADMIN: USUARIOS / ROLES / PERMISOS ─────────────────────
+   Mismo patrón que commerce-hub/apps-script auth.js §"USER MANAGEMENT UI"
+   (backend ya implementado en apps-script/Users.gs — createUsuario,
+   updateUsuario, getRoles, createRol, updateRol, getPermisos, updatePermisos). */
+
+let _rolesData = [];
+
+function renderUserManagementSection() {
+  if (!SESSION.isAdmin()) return;
+  const host = document.getElementById('cfg-tabs-host');
+  if (!host || document.getElementById('user-mgmt-section')) return;
+
+  const emptyState = document.getElementById('cfg-empty-state');
+  if (emptyState) emptyState.hidden = true;
+
+  const section = document.createElement('div');
+  section.id = 'user-mgmt-section';
+  section.innerHTML = `
+    <div class="view-toggle" style="margin-bottom:14px">
+      <button class="vtab active" id="ctab-usuarios" onclick="_showCfgTab('usuarios')">Usuarios</button>
+      <button class="vtab" id="ctab-roles" onclick="_showCfgTab('roles')">Roles y permisos</button>
+    </div>
+
+    <!-- TAB: Usuarios -->
+    <div id="ctab-content-usuarios">
+      <div class="toolbar" style="margin-bottom:10px">
+        <span id="usuarios-count" style="font-size:12px;color:var(--text2)">Cargando…</span>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary btn-sm" onclick="_openUserForm()">+ Nuevo usuario</button>
+      </div>
+
+      <div id="user-form-inline" hidden
+           style="background:var(--s2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px">
+        <div class="cfg-title" id="user-form-title" style="margin-bottom:12px;border:none;padding:0">Nuevo usuario</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nombre <span class="form-req">*</span></label>
+            <input class="input" id="uf-nombre" placeholder="Nombre completo">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email <span class="form-req">*</span></label>
+            <input class="input" id="uf-email" type="email" placeholder="email@empresa.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Contraseña <span id="uf-pw-req" class="form-req">*</span></label>
+            <input class="input" id="uf-password" type="password"
+                   placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+            <div class="form-hint" id="uf-pw-hint"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Rol <span class="form-req">*</span></label>
+            <select class="select" id="uf-rol"></select>
+          </div>
+        </div>
+        <div id="uf-error" style="color:var(--danger);font-size:12px;margin-bottom:10px" hidden></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="_saveUser()">Guardar</button>
+          <button class="btn btn-ghost btn-sm" onclick="_closeUserForm()">Cancelar</button>
+        </div>
+      </div>
+
+      <div id="usuarios-table-wrap">
+        <div class="loader-wrap"><div class="spinner"></div> Cargando usuarios…</div>
+      </div>
+    </div>
+
+    <!-- TAB: Roles y permisos -->
+    <div id="ctab-content-roles" hidden>
+      <div class="toolbar" style="margin-bottom:10px">
+        <span style="font-size:12px;color:var(--text2)">Roles del sistema</span>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary btn-sm" onclick="_openRolForm()">+ Nuevo rol</button>
+      </div>
+
+      <div id="rol-form-inline" hidden
+           style="background:var(--s2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px">
+        <div class="cfg-title" id="rol-form-title" style="margin-bottom:12px;border:none;padding:0">Nuevo rol</div>
+        <div class="form-group">
+          <label class="form-label">Nombre del rol <span class="form-req">*</span></label>
+          <input class="input" id="rf-nombre" placeholder="Ej: Supervisión, Atención al cliente">
+        </div>
+        <div id="rf-error" style="color:var(--danger);font-size:12px;margin-bottom:10px" hidden></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="_saveRol()">Guardar</button>
+          <button class="btn btn-ghost btn-sm" onclick="_closeRolForm()">Cancelar</button>
+        </div>
+      </div>
+
+      <div id="roles-table-wrap">
+        <div class="loader-wrap"><div class="spinner"></div> Cargando roles…</div>
+      </div>
+
+      <div id="permisos-matrix-wrap" style="margin-top:18px"></div>
+    </div>
+  `;
+
+  host.appendChild(section);
+  _loadRoles().then(_loadUsuarios);  // usuarios espera roles para mostrar nombres
+}
+
+/* ─── TABS ────────────────────────────────────────────────── */
+
+function _showCfgTab(tab) {
+  ['usuarios', 'roles'].forEach(function(t) {
+    const content = document.getElementById('ctab-content-' + t);
+    const btn     = document.getElementById('ctab-' + t);
+    if (content) content.hidden = (t !== tab);
+    if (btn)     btn.classList.toggle('active', t === tab);
+  });
+}
+
+/* ─── ROLES (lista compartida) ────────────────────────────── */
+
+function _rolNombre(id) {
+  const r = _rolesData.find(function(x) { return Number(x.id) === Number(id); });
+  return r ? r.nombre : ('Rol ' + id);
+}
+
+function _populateRolSelect(selectedId) {
+  const sel = document.getElementById('uf-rol');
+  if (!sel) return;
+  const activos = _rolesData.filter(function(r) { return String(r.activo) !== 'NO'; });
+  sel.innerHTML = activos.map(function(r) {
+    return '<option value="' + r.id + '">' + _escHtml(r.nombre) + '</option>';
+  }).join('');
+  if (selectedId != null) sel.value = String(selectedId);
+}
+
+async function _loadRoles() {
+  try {
+    const res = await _apiAuthPost({ action: 'getRoles' });
+    _rolesData = res.data || [];
+  } catch (e) {
+    _rolesData = [];
+  }
+  _renderRolesTable();
+  _populateRolSelect();
+}
+
+/* ─── FORMULARIO DE USUARIO ───────────────────────────────── */
+
+let _editingUserId = null;
+
+function _openUserForm(usuario) {
+  _editingUserId = usuario ? Number(usuario.id) : null;
+  const form   = document.getElementById('user-form-inline');
+  const title  = document.getElementById('user-form-title');
+  const pwHint = document.getElementById('uf-pw-hint');
+  const pwReq  = document.getElementById('uf-pw-req');
+  const errEl  = document.getElementById('uf-error');
+
+  if (errEl) errEl.hidden = true;
+
+  if (usuario) {
+    if (title)  title.textContent = 'Editar usuario';
+    document.getElementById('uf-nombre').value   = usuario.nombre   || '';
+    document.getElementById('uf-email').value    = usuario.email    || '';
+    document.getElementById('uf-password').value = '';
+    _populateRolSelect(usuario.id_rol);
+    if (pwHint) pwHint.textContent = 'Dejar vacío para no cambiar la contraseña';
+    if (pwReq)  pwReq.hidden = true;
+  } else {
+    if (title)  title.textContent = 'Nuevo usuario';
+    document.getElementById('uf-nombre').value   = '';
+    document.getElementById('uf-email').value    = '';
+    document.getElementById('uf-password').value = '';
+    _populateRolSelect();
+    if (pwHint) pwHint.textContent = '';
+    if (pwReq)  pwReq.hidden = false;
+  }
+
+  if (form) form.hidden = false;
+  const nameEl = document.getElementById('uf-nombre');
+  if (nameEl) nameEl.focus();
+}
+
+function _closeUserForm() {
+  const form = document.getElementById('user-form-inline');
+  if (form) form.hidden = true;
+  _editingUserId = null;
+}
+
+async function _saveUser() {
+  const nombre   = (document.getElementById('uf-nombre')   || {}).value || '';
+  const email    = (document.getElementById('uf-email')    || {}).value || '';
+  const password = (document.getElementById('uf-password') || {}).value || '';
+  const id_rol   = Number((document.getElementById('uf-rol') || {}).value || 2);
+  const errEl    = document.getElementById('uf-error');
+
+  if (!nombre.trim() || !email.trim()) {
+    if (errEl) { errEl.textContent = 'Nombre y email son requeridos.'; errEl.hidden = false; }
+    return;
+  }
+  if (!_editingUserId && !password.trim()) {
+    if (errEl) { errEl.textContent = 'La contraseña es requerida para nuevos usuarios.'; errEl.hidden = false; }
+    return;
+  }
+  if (password.trim() && password.trim().length < 6) {
+    if (errEl) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; errEl.hidden = false; }
+    return;
+  }
+
+  try {
+    if (_editingUserId) {
+      const data = { nombre: nombre.trim(), email: email.toLowerCase().trim(), id_rol };
+      if (password) data.password_hash = await sha256(password);
+      await _apiAuthPost({ action: 'updateUsuario', id: _editingUserId, data });
+    } else {
+      await _apiAuthPost({
+        action: 'createUsuario',
+        data: { nombre: nombre.trim(), email: email.toLowerCase().trim(), password_hash: await sha256(password), id_rol },
+      });
+    }
+    _closeUserForm();
+    _loadUsuarios();
+    if (typeof toast === 'function') toast('✓', _editingUserId ? 'Usuario actualizado' : 'Usuario creado', 'success');
+  } catch (err) {
+    if (errEl) { errEl.textContent = err.message || 'Error al guardar'; errEl.hidden = false; }
+  }
+}
+
+/* ─── TABLA DE USUARIOS ───────────────────────────────────── */
+
+async function _loadUsuarios() {
+  const wrap = document.getElementById('usuarios-table-wrap');
+  if (!wrap) return;
+
+  try {
+    const res      = await _apiAuthPost({ action: 'getUsuarios' });
+    const usuarios = res.data || [];
+
+    const countEl = document.getElementById('usuarios-count');
+    if (countEl) countEl.textContent = usuarios.length + ' usuario' + (usuarios.length !== 1 ? 's' : '');
+
+    if (!usuarios.length) {
+      wrap.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">No hay usuarios configurados.</div>';
+      return;
+    }
+
+    wrap.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--s2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">
+            <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Nombre</th>
+            <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Email</th>
+            <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Rol</th>
+            <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--border)">Estado</th>
+            <th style="padding:7px 10px;text-align:right;border-bottom:1px solid var(--border)">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${usuarios.map(function(u) {
+            const rolLabel = _rolNombre(u.id_rol);
+            const rolStyle = Number(u.id_rol) === 1
+              ? 'background:var(--primary-soft);color:var(--primary)'
+              : 'background:var(--s3);color:var(--text2)';
+            const activo   = u.activo === 'SI';
+            const uJson    = JSON.stringify(u).replace(/"/g, '&quot;');
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:7px 10px;color:var(--text)">${_escHtml(u.nombre || '—')}</td>
+              <td style="padding:7px 10px;color:var(--text2);font-family:'DM Mono',monospace;font-size:11px">${_escHtml(u.email || '—')}</td>
+              <td style="padding:7px 10px">
+                <span style="padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;${rolStyle}">${rolLabel}</span>
+              </td>
+              <td style="padding:7px 10px;text-align:center">
+                <span class="dot ${activo ? 'dot-on' : 'dot-off'}"></span>
+                <span style="font-size:10px;color:var(--text3);margin-left:3px">${activo ? 'Activo' : 'Inactivo'}</span>
+              </td>
+              <td style="padding:7px 10px;text-align:right;white-space:nowrap">
+                <button class="btn btn-secondary btn-sm" style="margin-right:4px"
+                        onclick="_openUserForm(${uJson})">Editar</button>
+                <button class="btn btn-${activo ? 'danger' : 'ghost'} btn-sm"
+                        onclick="_toggleUserActivo(${u.id},'${activo ? 'NO' : 'SI'}')">${activo ? 'Desactivar' : 'Activar'}</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    wrap.innerHTML = '<div style="color:var(--danger);font-size:12px;padding:8px 0">Error: ' + (err.message || 'No se pudo cargar') + '</div>';
+  }
+}
+
+async function _toggleUserActivo(id, nuevoActivo) {
+  try {
+    await _apiAuthPost({ action: 'updateUsuario', id: id, data: { activo: nuevoActivo } });
+    _loadUsuarios();
+    if (typeof toast === 'function') toast('✓', 'Usuario actualizado', 'success');
+  } catch (err) {
+    if (typeof toast === 'function') toast('⚠', err.message || 'Error', 'error');
+  }
+}
+
+/* ─── TABLA DE ROLES ──────────────────────────────────────── */
+
+function _renderRolesTable() {
+  const wrap = document.getElementById('roles-table-wrap');
+  if (!wrap) return;
+
+  if (!_rolesData.length) {
+    wrap.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">No hay roles configurados.</div>';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:var(--s2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">
+          <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Rol</th>
+          <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Tipo</th>
+          <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--border)">Estado</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:1px solid var(--border)">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${_rolesData.map(function(r) {
+          const sistema = String(r.es_sistema) === 'SI';
+          const activo  = String(r.activo) !== 'NO';
+          const rJson   = JSON.stringify(r).replace(/"/g, '&quot;');
+          const tipoStyle = sistema
+            ? 'background:var(--primary-soft);color:var(--primary)'
+            : 'background:var(--s3);color:var(--text2)';
+          return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:7px 10px;color:var(--text);font-weight:500">${_escHtml(r.nombre || '—')}</td>
+            <td style="padding:7px 10px">
+              <span style="padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;${tipoStyle}">${sistema ? 'Sistema' : 'Personalizado'}</span>
+            </td>
+            <td style="padding:7px 10px;text-align:center">
+              <span class="dot ${activo ? 'dot-on' : 'dot-off'}"></span>
+              <span style="font-size:10px;color:var(--text3);margin-left:3px">${activo ? 'Activo' : 'Inactivo'}</span>
+            </td>
+            <td style="padding:7px 10px;text-align:right;white-space:nowrap">
+              <button class="btn btn-secondary btn-sm" style="margin-right:4px" onclick="_selectRolForPermisos(${r.id})">Permisos</button>
+              ${sistema ? '' :
+                `<button class="btn btn-secondary btn-sm" style="margin-right:4px" onclick="_openRolForm(${rJson})">Editar</button>
+                 <button class="btn btn-${activo ? 'danger' : 'ghost'} btn-sm" onclick="_toggleRolActivo(${r.id},'${activo ? 'NO' : 'SI'}')">${activo ? 'Desactivar' : 'Activar'}</button>`}
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+/* ─── FORMULARIO DE ROL ───────────────────────────────────── */
+
+let _editingRolId = null;
+
+function _openRolForm(rol) {
+  _editingRolId = rol ? Number(rol.id) : null;
+  const form  = document.getElementById('rol-form-inline');
+  const title = document.getElementById('rol-form-title');
+  const err   = document.getElementById('rf-error');
+  const inp   = document.getElementById('rf-nombre');
+  if (err) err.hidden = true;
+  if (title) title.textContent = rol ? 'Editar rol' : 'Nuevo rol';
+  if (inp) inp.value = rol ? (rol.nombre || '') : '';
+  if (form) form.hidden = false;
+  if (inp) inp.focus();
+}
+
+function _closeRolForm() {
+  const form = document.getElementById('rol-form-inline');
+  if (form) form.hidden = true;
+  _editingRolId = null;
+}
+
+async function _saveRol() {
+  const nombre = (document.getElementById('rf-nombre') || {}).value || '';
+  const err    = document.getElementById('rf-error');
+  if (!nombre.trim()) {
+    if (err) { err.textContent = 'El nombre del rol es requerido.'; err.hidden = false; }
+    return;
+  }
+  try {
+    if (_editingRolId) {
+      await _apiAuthPost({ action: 'updateRol', id: _editingRolId, nombre: nombre.trim() });
+    } else {
+      await _apiAuthPost({ action: 'createRol', nombre: nombre.trim() });
+    }
+    _closeRolForm();
+    _loadRoles();
+    if (typeof toast === 'function') toast('✓', _editingRolId ? 'Rol actualizado' : 'Rol creado', 'success');
+  } catch (e) {
+    if (err) { err.textContent = e.message || 'Error al guardar'; err.hidden = false; }
+  }
+}
+
+async function _toggleRolActivo(id, nuevoActivo) {
+  try {
+    await _apiAuthPost({ action: 'updateRol', id: id, activo: nuevoActivo });
+    _loadRoles();
+    if (typeof toast === 'function') toast('✓', 'Rol actualizado', 'success');
+  } catch (e) {
+    if (typeof toast === 'function') toast('⚠', e.message || 'Error', 'error');
+  }
+}
+
+/* ─── MATRIZ DE PERMISOS (3 estados) ──────────────────────── */
+
+let _permisosData = [];
+
+function _selectRolForPermisos(idRol) {
+  _renderPermisosMatrix(idRol);
+  const wrap = document.getElementById('permisos-matrix-wrap');
+  if (wrap && wrap.scrollIntoView) wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function _renderPermisosMatrix(idRol) {
+  const wrap = document.getElementById('permisos-matrix-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loader-wrap"><div class="spinner"></div> Cargando permisos…</div>';
+
+  try {
+    const res = await _apiAuthPost({ action: 'getPermisos' });
+    _permisosData = res.data || [];
+  } catch (e) {
+    wrap.innerHTML = '<div style="color:var(--danger);font-size:12px;padding:8px 0">Error: ' + (e.message || 'No se pudo cargar') + '</div>';
+    return;
+  }
+
+  const rol     = _rolesData.find(function(r) { return Number(r.id) === Number(idRol); });
+  const sistema = rol && String(rol.es_sistema) === 'SI';
+
+  const idx = {};
+  _permisosData.forEach(function(p) { if (Number(p.id_rol) === Number(idRol)) idx[p.modulo] = p; });
+
+  function estadoDe(mod) {
+    if (sistema) return 'editar';
+    const p = idx[mod] || {};
+    if (String(p.puede_ver) !== 'SI') return 'oculto';
+    return String(p.puede_editar) === 'SI' ? 'editar' : 'ver';
+  }
+
+  function radio(mod, val, est) {
+    const dis = sistema ? 'disabled' : '';
+    return '<input type="radio" name="perm-' + mod + '" value="' + val + '"' + (est === val ? ' checked' : '') + ' ' + dis + '>';
+  }
+
+  wrap.innerHTML = `
+    <div class="cfg-section">
+      <div class="cfg-title" style="display:flex;align-items:center;gap:8px">
+        Permisos — ${_escHtml(rol ? rol.nombre : '')}
+      </div>
+      ${sistema
+        ? '<p style="font-size:12px;color:var(--text2);margin:4px 0 12px">El <strong>Administrador</strong> tiene acceso total a todos los módulos y no es configurable.</p>'
+        : '<p style="font-size:12px;color:var(--text2);margin:4px 0 12px">Definí el acceso de este rol a cada módulo.</p>'}
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="background:var(--s2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)">
+            <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Módulo</th>
+            <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--border)">Oculto</th>
+            <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--border)">Solo ver</th>
+            <th style="padding:7px 10px;text-align:center;border-bottom:1px solid var(--border)">Ver + editar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${MODULOS.map(function(mod) {
+            const est = estadoDe(mod);
+            return `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:7px 10px;color:var(--text);font-weight:500">${MODULO_LABELS[mod] || mod}</td>
+              <td style="padding:7px 10px;text-align:center">${radio(mod, 'oculto', est)}</td>
+              <td style="padding:7px 10px;text-align:center">${radio(mod, 'ver', est)}</td>
+              <td style="padding:7px 10px;text-align:center">${radio(mod, 'editar', est)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      ${sistema ? '' : `
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+          <button class="btn btn-primary btn-sm" onclick="_savePermisosMatrix(${idRol})">Guardar permisos</button>
+          <span id="permisos-save-status" style="font-size:12px;color:var(--text2)"></span>
+        </div>`}
+    </div>
+  `;
+}
+
+async function _savePermisosMatrix(idRol) {
+  const statusEl = document.getElementById('permisos-save-status');
+  if (statusEl) statusEl.textContent = 'Guardando…';
+
+  const MAP = {
+    oculto: { ver: 'NO', editar: 'NO' },
+    ver:    { ver: 'SI', editar: 'NO' },
+    editar: { ver: 'SI', editar: 'SI' },
+  };
+
+  try {
+    const promises = [];
+    MODULOS.forEach(function(mod) {
+      const sel = document.querySelector('input[name="perm-' + mod + '"]:checked');
+      const est = sel ? sel.value : 'oculto';
+      const v   = MAP[est] || MAP.oculto;
+      promises.push(_apiAuthPost({
+        action:       'updatePermisos',
+        id_rol:       idRol,
+        modulo:       mod,
+        puede_ver:    v.ver,
+        puede_editar: v.editar,
+      }));
+    });
+    await Promise.all(promises);
+    if (statusEl) statusEl.textContent = '✓ Guardado';
+    if (typeof toast === 'function') toast('✓', 'Permisos actualizados', 'success');
+    setTimeout(function() { if (statusEl) statusEl.textContent = ''; }, 3000);
+  } catch (err) {
+    if (statusEl) statusEl.textContent = 'Error: ' + (err.message || 'No se pudo guardar');
+    if (typeof toast === 'function') toast('⚠', 'Error al guardar permisos', 'error');
+  }
 }

@@ -60,7 +60,7 @@ Ver `docs/gas-setup.md` para el setup paso a paso.
 | Archivo | Responsabilidad |
 |---------|----------------|
 | `src/js/config.js` | Constantes, `STATE` global, `CFG`, tema, formato ARS/fecha |
-| `src/js/auth.js` | `SESSION`, login/logout, RBAC (`canView`/`canEdit`), chip de usuario |
+| `src/js/auth.js` | `SESSION`, login/logout, RBAC (`canView`/`canEdit`), chip de usuario, pantalla de Configuración (usuarios/roles/permisos — mismo patrón que `commerce-hub`) |
 | `src/js/api.js` | `apiPost()` + wrappers por acción, con rama mock por cada uno |
 | `src/js/ui.js` | `showPage()` (navegación SPA), `toast()`, clases de badge de estado |
 | `src/js/gestiones.js` | Búsqueda de cliente por DNI, historial de pedidos, alta/seguimiento de gestión |
@@ -70,10 +70,9 @@ Ver `docs/gas-setup.md` para el setup paso a paso.
 **Regla**: cada archivo tiene una responsabilidad única. No agregar lógica de API en `ui.js` ni lógica de render en `api.js`.
 
 **Pendiente de esta primera pasada** (ver `docs/roadmap.md`):
-- Pantalla de Configuración (usuarios/roles/permisos) — el backend ya lo soporta (`Users.gs`), falta la UI.
 - Subida real de comprobantes a Drive (`subirComprobante` hoy espera que el frontend ya tenga la URL).
 - Detalle de gestión en drawer (hoy es un toast simple).
-- Probado únicamente en modo demo (`CFG.isMock()`) — falta probar contra el backend real una vez desplegado (ver `docs/gas-setup.md`).
+- Probado únicamente en modo demo (`CFG.isMock()`) — la pantalla de Configuración no se ejerce en modo demo (`initAuth()` no llega a `_applySession()` sin backend real, igual que en `commerce-hub`); falta probar todo contra el backend real una vez desplegado (ver `docs/gas-setup.md`).
 
 ---
 
