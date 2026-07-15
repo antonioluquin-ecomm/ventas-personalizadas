@@ -52,7 +52,7 @@ Este proyecto **no** tiene una hoja de pedidos propia — el historial de pedido
 |-----|--------|------|-------------|------------|
 | A | `id` | Entero | ID único autoincremental | Único, no vacío |
 | B | `canal_ingreso` | Lista | Cómo llegó la gestión a la herramienta | Ver `CANAL_INGRESO` en Config.gs: `Bot` / `Recontacto Cancelados` |
-| C | `cliente_email` | Texto | Email del cliente — clave de búsqueda contra la cache de pedidos | `.trim().toLowerCase()` |
+| C | `cliente_documento` | Texto | DNI/CUIT del cliente — clave de búsqueda contra `vtex-control-center` (no email: VTEX lo devuelve anonimizado en la API para esta cuenta, ver `CLAUDE.md`) | Solo dígitos, texto no número (evita perder ceros) |
 | D | `cliente_nombre` | Texto | Nombre del cliente, denormalizado desde el pedido consultado | Libre |
 | E | `cliente_telefono` | Texto | Teléfono, denormalizado desde el pedido consultado | Libre |
 | F | `pedido_referencia` | Texto | `orderId` VTEX del pedido cancelado a recontactar (vacío si es consulta directa por bot) | Texto, no número (evita perder ceros) |
@@ -81,7 +81,7 @@ Este proyecto **no** tiene una hoja de pedidos propia — el historial de pedido
 | A | `id` | Entero | ID único autoincremental | Único, no vacío |
 | B | `id_gestion` | Entero | FK opcional a `GESTIONES.id` | Vacío si la venta se cargó suelta, sin gestión previa registrada |
 | C | `order_id_vtex` | Texto | Pedido creado en VTEX vía Master Data (pago pendiente / promissory) | Texto, no número |
-| D | `cliente_email` | Texto | Email del cliente | `.trim().toLowerCase()` |
+| D | `cliente_documento` | Texto | DNI/CUIT del cliente | Solo dígitos, texto no número |
 | E | `agente` | Texto | Email del agente que concretó la venta | Apps Script (sesión) |
 | F | `estado_venta` | Lista | Estado de la venta | Ver `ESTADOS_VENTA` en Config.gs |
 | G | `origen` | Lista (radio) | Cómo se originó la venta | Ver `ORIGENES_VENTA` en Config.gs: `Referido` / `Atención` / `Bot` / `Planilla` |
@@ -190,7 +190,7 @@ VENTAS.order_id_vtex  ──→ referencia externa (VTEX), no FK interna
 
 - **`GESTIONES` → `VENTAS`**: para saber si una gestión se concretó, buscar en `VENTAS` la primera fila con `id_gestion = GESTIONES.id` (patrón §9.1 de `google_sheets_standards.md`, invertido para no duplicar la relación).
 - **`VENTAS` → `PAGOS_VENTA` / `COMPROBANTES_VENTA`**: relación muchos-a-uno estándar, resuelta con `filter(id_venta === X)` al servir el detalle de una venta.
-- **`VENTAS.cliente_email` / `GESTIONES.cliente_email`**: no tienen FK contra ninguna hoja propia — el cruce con el historial real de pedidos se hace en vivo contra el endpoint de `vtex-control-center`, nunca almacenado más que el snapshot puntual (`pedido_referencia`, `cantidad_pedidos_cliente`).
+- **`VENTAS.cliente_documento` / `GESTIONES.cliente_documento`**: no tienen FK contra ninguna hoja propia — el cruce con el historial real de pedidos se hace en vivo contra el endpoint de `vtex-control-center` (búsqueda por documento, no email — ver `CLAUDE.md`), nunca almacenado más que el snapshot puntual (`pedido_referencia`, `cantidad_pedidos_cliente`).
 
 ---
 
@@ -201,7 +201,7 @@ Sin implementar todavía — nombres y contratos a definir cuando se arranque el
 ```
 listGestiones(params)            → filtros: estado_gestion, canal_ingreso, agente_contacto
 getGestionById(id)                → adjunta la venta asociada si existe (lookup por id_gestion)
-buscarPedidosCliente(email)       → proxy hacia el endpoint de solo lectura de vtex-control-center
+buscarPedidosCliente(documento)   → proxy hacia getPedidosClienteCache de vtex-control-center (en vivo, por DNI/CUIT)
 registrarContacto(id, data)       → marca estado_gestion, fecha_contacto, agente_contacto
 crearVenta(data)                  → alta en VENTAS con estado_venta = "Pago pendiente"
 agregarPagoVenta(idVenta, data)   → alta en PAGOS_VENTA (append-only)

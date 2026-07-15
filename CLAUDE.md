@@ -12,7 +12,7 @@
 - **Mock mode**: si no hay URL de API configurada, las funciones deben retornar datos de ejemplo compatibles con la estructura real (`src/data/*.json`). Todo endpoint nuevo necesita su rama mock.
 - **No tocar `Auth.gs`** ni el módulo de sesiones sin auditoría previa.
 - **No hacer push** sin confirmación explícita del usuario.
-- **Datos sensibles del cliente** (email, teléfono, medios de pago) — enmascarar en vistas de lista, igual que hace `vtex-control-center/apps-script/Pedidos.gs` (`maskEmail_`, `maskTail_`).
+- **Datos sensibles del cliente** (teléfono, documento, medios de pago) — enmascarar en vistas de lista, igual que hace `vtex-control-center/apps-script/Pedidos.gs` (`maskTail_`). No hay email real disponible desde VTEX para este proyecto (ver dependencia externa más abajo).
 
 ---
 
@@ -25,13 +25,14 @@
 
 ---
 
-## Dependencia externa: cache de pedidos
+## Dependencia externa: pedidos por cliente (vtex-control-center)
 
-Este proyecto **no** guarda credenciales VTEX ni llama a la API de VTEX. `vtex-control-center` mantiene una hoja cache (`PEDIDOS_DB`) actualizada una vez al día vía trigger, y expone la acción `getPedidosClienteCache` de solo lectura sobre esa cache.
+Este proyecto **no** guarda credenciales VTEX ni llama a la API de VTEX. `vtex-control-center` expone la acción `getPedidosClienteCache`, que consulta VTEX **en vivo** (no una cache diaria — se descartó por volumen real de pedidos, ver decisión 004).
 
-- **Contrato completo del endpoint** (request/response, auth, sync diario): `vtex-control-center/docs/decisions/004-endpoint-pedidos-ventas-personalizadas.md`.
+- **Contrato completo del endpoint** (request/response, auth): `vtex-control-center/docs/decisions/004-endpoint-pedidos-ventas-personalizadas.md` (Addendum 2 tiene el contrato vigente).
+- **Se busca por DNI/documento del cliente, no por email.** VTEX anonimiza el email en su API para esta cuenta (`clientProfileData.email` devuelve un valor tipo `...@ct.vtex.com.br`, no el real) — confirmado en vivo el 2026-07-14. El teléfono y el documento sí son reales. Por eso `GESTIONES.cliente_documento` es la clave de búsqueda, no `cliente_email` (ver `docs/ventas_personalizadas_db_structure.md`).
 - Auth: token de servicio (`VTEX_CC_SERVICE_TOKEN` en Script Properties de este proyecto), no sesión de usuario — es una llamada backend-a-backend.
-- El endpoint devuelve email/teléfono del cliente **sin enmascarar** (a diferencia de la UI propia de `vtex-control-center`), porque el propósito de este proyecto es justamente contactar al cliente. Cada llamada queda logueada del lado de `vtex-control-center`.
+- El endpoint devuelve teléfono del cliente **sin enmascarar** (a diferencia de la UI propia de `vtex-control-center`), porque el propósito de este proyecto es justamente contactar al cliente. No devuelve email (ver punto anterior). Cada llamada queda logueada del lado de `vtex-control-center`.
 - Multi-store transparente: el endpoint busca en ambas tiendas (Sporting, Woker) y devuelve `store_id` por pedido — este proyecto no necesita selector de tienda.
 - Si el flujo de aprobación de pago necesita mutar el pedido en VTEX en tiempo real (pasar a "pago aprobado"), evaluar si esa escritura la hace `vtex-control-center` (que ya tiene el patrón de transición de estado en `Pedidos.gs`) expuesta como una acción nueva, en vez de duplicar la integración acá.
 
@@ -61,7 +62,7 @@ Usar commits descriptivos con prefijo convencional (`feat:`, `fix:`, `style:`, `
 
 Herramienta operativa para el equipo de agentes de venta (Sporting + Woker eCommerce). Cubre dos flujos:
 
-1. **Re-contacto de clientes con pedidos cancelados** — identificados externamente por un Power BI que cruza clientes con pedidos cancelados y sin compra posterior. El agente busca al cliente por email, ve su historial de pedidos (vía cache de `vtex-control-center`), y registra si lo contactó.
+1. **Re-contacto de clientes con pedidos cancelados** — identificados externamente por un Power BI que cruza clientes con pedidos cancelados y sin compra posterior. El agente busca al cliente por DNI/documento, ve su historial de pedidos (consulta en vivo vía `vtex-control-center`), y registra si lo contactó.
 2. **Concreción de venta** — una vez el cliente confirma, el agente genera el pedido en VTEX vía Master Data (pago pendiente, promissory/pagaré), envía el link de pago, y cuando el cliente abona, el agente aprueba el pago y completa los datos operativos requeridos por administración (origen, tipo de factura, agente de retención, medios de pago con montos/transacciones, comprobantes).
 
 Ver estructura del Sheet en [`docs/ventas_personalizadas_db_structure.md`](docs/ventas_personalizadas_db_structure.md).
