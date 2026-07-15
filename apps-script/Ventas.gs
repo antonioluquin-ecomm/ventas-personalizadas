@@ -194,11 +194,16 @@ function subirComprobante(body) {
  * Aprueba el pago de una venta: valida que la suma de PAGOS_VENTA coincida
  * con monto_total, y pasa estado_venta a "Pago aprobado".
  *
- * PENDIENTE (no implementado en esta función): mutar el pedido en VTEX a
- * "pago aprobado" en tiempo real. Requiere una acción nueva en
- * vtex-control-center reutilizando el patrón de executeOrderTransition_ de
- * Pedidos.gs (ver CLAUDE.md) — por ahora esta función solo actualiza el
- * Sheet, no VTEX. La respuesta incluye "warning" para dejarlo explícito.
+ * DECISIÓN (2026-07-15, confirmado con prueba real): esta función NO muta
+ * VTEX. Se investigó automatizar el botón "Aprobar pago" del admin de VTEX
+ * (mecanismo notifypayment) y se confirmó que requiere la cookie de sesión
+ * autenticada del admin — no funciona con las credenciales de servicio
+ * (App Key/Token) que usa un backend. Ver
+ * vtex-control-center/apps-script/AprobacionPago.gs para el detalle de la
+ * investigación. El agente sigue aprobando el pago a mano en VTEX admin
+ * como paso aparte; esta función solo registra ese hecho del lado del
+ * Sheet. La respuesta incluye "warning" para dejarlo explícito en el
+ * frontend cuando se implemente.
  */
 function aprobarPagoVenta(body) {
   var idVenta = Number(body.id);
@@ -237,7 +242,7 @@ function aprobarPagoVenta(body) {
 
   return {
     ok: true,
-    warning: 'El pedido en VTEX no se actualizó automáticamente — pendiente de implementar la mutación cross-project (ver comentario en Ventas.gs).',
+    warning: 'El pedido en VTEX no se actualizó automáticamente — el agente debe aprobar el pago manualmente en el admin de VTEX (no es automatizable, ver comentario en Ventas.gs).',
   };
 }
 

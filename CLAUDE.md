@@ -34,7 +34,7 @@ Este proyecto **no** guarda credenciales VTEX ni llama a la API de VTEX. `vtex-c
 - Auth: token de servicio (`VTEX_CC_SERVICE_TOKEN` en Script Properties de este proyecto), no sesión de usuario — es una llamada backend-a-backend.
 - El endpoint devuelve teléfono del cliente **sin enmascarar** (a diferencia de la UI propia de `vtex-control-center`), porque el propósito de este proyecto es justamente contactar al cliente. No devuelve email (ver punto anterior). Cada llamada queda logueada del lado de `vtex-control-center`.
 - Multi-store transparente: el endpoint busca en ambas tiendas (Sporting, Woker) y devuelve `store_id` por pedido — este proyecto no necesita selector de tienda.
-- Si el flujo de aprobación de pago necesita mutar el pedido en VTEX en tiempo real (pasar a "pago aprobado"), evaluar si esa escritura la hace `vtex-control-center` (que ya tiene el patrón de transición de estado en `Pedidos.gs`) expuesta como una acción nueva, en vez de duplicar la integración acá.
+- **Aprobación de pago: no se automatiza contra VTEX.** Se investigó (2026-07-15) el botón "Aprobar pago" del admin de VTEX para pedidos con pago manual (Promissory) — requiere la cookie de sesión autenticada del admin, confirmado que no funciona con App Key/Token contra un pedido de prueba real. Ver `vtex-control-center/apps-script/AprobacionPago.gs`. El agente sigue aprobando el pago a mano en VTEX; `aprobarPagoVenta` (`Ventas.gs`) solo registra el estado del lado del Sheet.
 
 ---
 
@@ -53,7 +53,7 @@ Este proyecto **no** guarda credenciales VTEX ni llama a la API de VTEX. `vtex-c
 
 Ver `docs/gas-setup.md` para el setup paso a paso.
 
-**Pendiente conocido:** `aprobarPagoVenta` solo actualiza el Sheet — todavía no muta el pedido en VTEX a "pago aprobado" (necesita una acción nueva en `vtex-control-center`, ver comentario en `Ventas.gs`).
+**Decisión conocida:** `aprobarPagoVenta` solo actualiza el Sheet — no muta el pedido en VTEX. Confirmado que el mecanismo de aprobación de pago de VTEX (Promissory) no es automatizable con las credenciales de servicio; el agente lo sigue haciendo a mano en VTEX admin. Ver comentario en `Ventas.gs`.
 
 ## Arquitectura de archivos JS (frontend — a definir a medida que se implementa)
 
