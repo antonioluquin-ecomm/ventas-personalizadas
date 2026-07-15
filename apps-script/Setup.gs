@@ -192,11 +192,11 @@ function seedUsuarios(sheet) {
       Logger.log('  [USUARIOS]  "' + item.email + '": ya existe, sin cambios');
       return;
     }
-    var nextId = getNextId(sheet);
-    var salt   = Utilities.getUuid();
-    var bytes  = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + item.password, Utilities.Charset.UTF_8);
-    var hash   = bytes.map(function(b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
-    var now    = new Date().toISOString();
+    var nextId       = getNextId(sheet);
+    var salt         = Utilities.getUuid();
+    var passwordHash = computeSha256Hex(item.password); // simula el SHA256(plaintext) que hace el frontend
+    var hash         = hashPassword(salt, passwordHash);
+    var now          = new Date().toISOString();
     sheet.appendRow([nextId, item.nombre, item.email, hash, salt, item.id_rol, 'SI', now, '', 'setup']);
     existingEmails[emailKey] = true;
     insertados++;
