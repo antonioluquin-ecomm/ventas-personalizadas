@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "id_venta": 1,
+    "medio_pago": "Payway",
+    "monto": 45999.00,
+    "nro_transaccion": "TX-000123",
+    "payway_tipo": "Crédito",
+    "tarjeta_entidad": "Visa",
+    "tarjeta_ultimos4": "1234",
+    "cuotas": 3,
+    "fecha_creacion": "2026-07-08T15:30:00.000Z",
+    "creado_por": "admin@ventas-personalizadas.com"
+  }
+]

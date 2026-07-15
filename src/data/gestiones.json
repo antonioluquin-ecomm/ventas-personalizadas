@@ -1,0 +1,53 @@
+[
+  {
+    "id": 1,
+    "canal_ingreso": "Recontacto Cancelados",
+    "cliente_documento": "30123456",
+    "cliente_nombre": "Juan Pérez",
+    "cliente_telefono": "+5491122334455",
+    "pedido_referencia": "1600000000000-01",
+    "cantidad_pedidos_cliente": 3,
+    "estado_gestion": "Pendiente",
+    "fecha_contacto": "",
+    "agente_contacto": "",
+    "notas": "Cliente con pedido cancelado hace 5 días, sin recompra.",
+    "fecha_creacion": "2026-07-10T13:00:00.000Z",
+    "fecha_modificacion": "2026-07-10T13:00:00.000Z",
+    "creado_por": "admin@ventas-personalizadas.com",
+    "modificado_por": "admin@ventas-personalizadas.com"
+  },
+  {
+    "id": 2,
+    "canal_ingreso": "Bot",
+    "cliente_documento": "27987654",
+    "cliente_nombre": "María Gómez",
+    "cliente_telefono": "+5491199887766",
+    "pedido_referencia": "",
+    "cantidad_pedidos_cliente": 1,
+    "estado_gestion": "Contactado",
+    "fecha_contacto": "2026-07-12T15:30:00.000Z",
+    "agente_contacto": "admin@ventas-personalizadas.com",
+    "notas": "Consultó por talles disponibles vía bot.",
+    "fecha_creacion": "2026-07-12T14:00:00.000Z",
+    "fecha_modificacion": "2026-07-12T15:30:00.000Z",
+    "creado_por": "admin@ventas-personalizadas.com",
+    "modificado_por": "admin@ventas-personalizadas.com"
+  },
+  {
+    "id": 3,
+    "canal_ingreso": "Recontacto Cancelados",
+    "cliente_documento": "20456789",
+    "cliente_nombre": "Carlos Ruiz",
+    "cliente_telefono": "+5491155443322",
+    "pedido_referencia": "1600000000001-01",
+    "cantidad_pedidos_cliente": 2,
+    "estado_gestion": "Concretado",
+    "fecha_contacto": "2026-07-08T11:00:00.000Z",
+    "agente_contacto": "admin@ventas-personalizadas.com",
+    "notas": "Confirmó recompra, venta generada.",
+    "fecha_creacion": "2026-07-08T10:00:00.000Z",
+    "fecha_modificacion": "2026-07-08T16:00:00.000Z",
+    "creado_por": "admin@ventas-personalizadas.com",
+    "modificado_por": "admin@ventas-personalizadas.com"
+  }
+]

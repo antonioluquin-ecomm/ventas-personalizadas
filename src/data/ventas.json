@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "id_gestion": 3,
+    "order_id_vtex": "1600000000001-01",
+    "cliente_documento": "20456789",
+    "agente": "admin@ventas-personalizadas.com",
+    "estado_venta": "Pago aprobado",
+    "origen": "Referido",
+    "nro_caso": "CASE-001",
+    "tipo_factura": "B",
+    "agente_retencion": "NO",
+    "razon_social": "",
+    "cuit": "",
+    "monto_total": 45999.00,
+    "fecha_aprobacion_pago": "2026-07-08T16:00:00.000Z",
+    "fecha_creacion": "2026-07-08T15:00:00.000Z",
+    "fecha_modificacion": "2026-07-08T16:00:00.000Z",
+    "creado_por": "admin@ventas-personalizadas.com",
+    "modificado_por": "admin@ventas-personalizadas.com"
+  }
+]

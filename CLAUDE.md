@@ -55,17 +55,25 @@ Ver `docs/gas-setup.md` para el setup paso a paso.
 
 **Decisión conocida:** `aprobarPagoVenta` solo actualiza el Sheet — no muta el pedido en VTEX. Confirmado que el mecanismo de aprobación de pago de VTEX (Promissory) no es automatizable con las credenciales de servicio; el agente lo sigue haciendo a mano en VTEX admin. Ver comentario en `Ventas.gs`.
 
-## Arquitectura de archivos JS (frontend — a definir a medida que se implementa)
+## Arquitectura de archivos JS (frontend — primer avance implementado, v0.1.0)
 
 | Archivo | Responsabilidad |
 |---------|----------------|
-| `src/js/config.js` | Constantes, `STATE` global, `CFG`, tema |
-| `src/js/api.js` | `apiPost()`, llamadas al endpoint de pedidos y al backend propio |
-| `src/js/ui.js` | Badges, toast, drawer, navegación entre módulos |
-| `src/js/gestiones.js` | Búsqueda de cliente, historial de pedidos, registro de contacto |
-| `src/js/ventas.js` | Formulario de aprobación de pago, medios de pago múltiples, adjuntos |
+| `src/js/config.js` | Constantes, `STATE` global, `CFG`, tema, formato ARS/fecha |
+| `src/js/auth.js` | `SESSION`, login/logout, RBAC (`canView`/`canEdit`), chip de usuario |
+| `src/js/api.js` | `apiPost()` + wrappers por acción, con rama mock por cada uno |
+| `src/js/ui.js` | `showPage()` (navegación SPA), `toast()`, clases de badge de estado |
+| `src/js/gestiones.js` | Búsqueda de cliente por DNI, historial de pedidos, alta/seguimiento de gestión |
+| `src/js/ventas.js` | Alta de venta, medios de pago múltiples, aprobación de pago |
+| `src/js/seguimiento.js` | `getResumen()` — KPIs de Inicio y del módulo Seguimiento |
 
 **Regla**: cada archivo tiene una responsabilidad única. No agregar lógica de API en `ui.js` ni lógica de render en `api.js`.
+
+**Pendiente de esta primera pasada** (ver `docs/roadmap.md`):
+- Pantalla de Configuración (usuarios/roles/permisos) — el backend ya lo soporta (`Users.gs`), falta la UI.
+- Subida real de comprobantes a Drive (`subirComprobante` hoy espera que el frontend ya tenga la URL).
+- Detalle de gestión en drawer (hoy es un toast simple).
+- Probado únicamente en modo demo (`CFG.isMock()`) — falta probar contra el backend real una vez desplegado (ver `docs/gas-setup.md`).
 
 ---
 

@@ -1,0 +1,42 @@
+[
+  {
+    "_documento": "30123456",
+    "order_id": "1600000000000-01",
+    "store_id": "sporting",
+    "sequence": "7000000",
+    "creation_date": "2026-07-05T14:00:00.000Z",
+    "status": "canceled",
+    "status_description": "Cancelado",
+    "value": 45999.00,
+    "sales_channel": "1",
+    "client_name": "Juan Pérez",
+    "client_phone": "+5491122334455",
+    "payment_names": "Visa",
+    "items": [
+      { "id": "1", "name": "Zapatillas Running Hombre", "quantity": 1, "price": 45999, "sellingPrice": 45999 }
+    ],
+    "payments": [
+      { "name": "Visa", "group": "creditCardPaymentGroup", "value": 45999, "installments": 3 }
+    ]
+  },
+  {
+    "_documento": "20456789",
+    "order_id": "1600000000001-01",
+    "store_id": "sporting",
+    "sequence": "7000001",
+    "creation_date": "2026-07-08T15:00:00.000Z",
+    "status": "invoiced",
+    "status_description": "Facturado",
+    "value": 45999.00,
+    "sales_channel": "2",
+    "client_name": "Carlos Ruiz",
+    "client_phone": "+5491155443322",
+    "payment_names": "Payway",
+    "items": [
+      { "id": "2", "name": "Campera Running Unisex", "quantity": 1, "price": 45999, "sellingPrice": 45999 }
+    ],
+    "payments": [
+      { "name": "Visa", "group": "creditCardPaymentGroup", "value": 45999, "installments": 3 }
+    ]
+  }
+]
