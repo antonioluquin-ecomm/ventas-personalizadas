@@ -4,7 +4,7 @@
 
 - [x] Definir modelo de datos del Sheet (gestiones, contactos, ventas, pagos, adjuntos) — ver `docs/ventas_personalizadas_db_structure.md`
 - [x] Definir contrato del endpoint de solo lectura que expondrá `vtex-control-center` (cache diaria de pedidos) — ver `vtex-control-center/docs/decisions/004-endpoint-pedidos-ventas-personalizadas.md`
-- [x] Implementar `PEDIDOS_DB` + `syncPedidosCache` + acción `getPedidosClienteCache` en `vtex-control-center` (`apps-script/PedidosCache.gs`, v2.19.0) — pendiente validar `f_lastChange` contra VTEX real y correr la carga inicial antes de activar el trigger
+- [x] Implementar acción `getPedidosClienteCache` en `vtex-control-center` (`apps-script/PedidosCache.gs`) — pivot 2026-07-14: es un proxy 100% en vivo (búsqueda por email vs VTEX en el momento), no una cache diaria — el volumen real (~32.000 pedidos/mes) hacía inviable pre-cargar todo. Ver `vtex-control-center/docs/decisions/004-endpoint-pedidos-ventas-personalizadas.md` (addendum). Sin cambios de contrato para este proyecto.
 - [ ] Generar `VP_SERVICE_TOKEN` en Script Properties de `vtex-control-center` y copiarlo como `VTEX_CC_SERVICE_TOKEN` en Script Properties de este proyecto (cuando se implemente el backend acá)
 - [ ] Confirmar con VTEX si existe API de creación de pedido (placement) o si v1 sigue usando Master Data
 - [ ] Login + shell (SPA, RBAC flexible por módulo — ver `login_standard.md` y `application_shell.md`)
